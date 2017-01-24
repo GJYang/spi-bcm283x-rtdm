@@ -1,5 +1,6 @@
 /**
  * Copyright (C) 2016 Nicolas Schurando <schurann@ext.essilor.com>
+ * Copyright (C) 2017 Corneliu Zuzu <corneliu.zuzu@arobs.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -51,11 +52,11 @@ typedef struct buffer_s {
  * Device config structure stored inside each context.
  */
 typedef struct config_s {
-	int bit_order;
-	int data_mode;
-	int clock_divider;
-	int chip_select;
-	int chip_select_polarity;
+	int         bit_order;
+	int         data_mode;
+	uint16_t    clock_divider;
+	int         chip_select;
+	int         chip_select_polarity;
 } config_t;
 
 /**
@@ -78,8 +79,8 @@ static struct rtdm_device spi_bcm283x_devices[2];
  * @param[in] oflags Open flags as passed by the user.
  * @return 0 on success. On failure, a negative error code is returned.
  */
-static int bcm283x_spi_rtdm_open(struct rtdm_fd *fd, int oflags) {
-
+static int bcm283x_spi_rtdm_open(struct rtdm_fd *fd, int oflags)
+{
 	spi_bcm283x_context_t *context;
 
 	/* Retrieve context */
@@ -93,7 +94,6 @@ static int bcm283x_spi_rtdm_open(struct rtdm_fd *fd, int oflags) {
 	context->config.chip_select_polarity = LOW;
 
 	return 0;
-
 }
 
 /**
@@ -101,10 +101,8 @@ static int bcm283x_spi_rtdm_open(struct rtdm_fd *fd, int oflags) {
  * @param[in] fd File descriptor associated with opened device instance.
  * @return 0 on success. On failure return a negative error code.
  */
-static void bcm283x_spi_rtdm_close(struct rtdm_fd *fd) {
-
-	return;
-
+static void bcm283x_spi_rtdm_close(struct rtdm_fd *fd)
+{
 }
 
 /**
@@ -139,7 +137,6 @@ static ssize_t bcm283x_spi_rtdm_read_rt(struct rtdm_fd *fd, void __user *buf, si
 
 	/* Return read bytes */
 	return read_size;
-
 }
 
 /**
@@ -150,14 +147,15 @@ static ssize_t bcm283x_spi_rtdm_read_rt(struct rtdm_fd *fd, void __user *buf, si
  * @param[in] size Number of bytes the user requests to write.
  * @return On success, the number of bytes written. On failure return either -ENOSYS, to request that this handler be called again from the opposite realtime/non-realtime context, or another negative error code.
  */
-static ssize_t bcm283x_spi_rtdm_write_rt(struct rtdm_fd *fd, const void __user *buf, size_t size) {
-
+static ssize_t bcm283x_spi_rtdm_write_rt(struct rtdm_fd *fd, const void __user *buf, size_t size)
+{
 	spi_bcm283x_context_t *context;
 	size_t write_size;
 	int res;
 
 	/* Ensure that there will be enough space in the buffer */
-	if (size > BCM283X_SPI_BUFFER_SIZE_MAX) {
+	if (size > BCM283X_SPI_BUFFER_SIZE_MAX)
+    {
 		printk(KERN_ERR "%s: Trying to transmit data larger than buffer size !", __FUNCTION__);
 		return -EINVAL;
 	}
@@ -168,7 +166,8 @@ static ssize_t bcm283x_spi_rtdm_write_rt(struct rtdm_fd *fd, const void __user *
 
 	/* Save data in kernel space buffer */
 	res = rtdm_safe_copy_from_user(fd, context->transmit_buffer.data, buf, write_size);
-	if (res) {
+	if (res)
+    {
 		printk(KERN_ERR "%s: Can't copy data from user space to driver (%d)!\r\n", __FUNCTION__, res);
 		return (res < 0) ? res : -res;
 	}
@@ -201,9 +200,10 @@ static ssize_t bcm283x_spi_rtdm_write_rt(struct rtdm_fd *fd, const void __user *
  * @param value An integer representing a bit order preference.
  * @return 0 on success, -EINVAL if the specified value is invalid.
  */
-static int bcm283x_spi_change_bit_order(spi_bcm283x_context_t *context, const int value) {
-
-	switch (value) {
+static int bcm283x_spi_change_bit_order(spi_bcm283x_context_t *context, const int value)
+{
+	switch (value)
+	{
 		case BCM283X_SPI_BIT_ORDER_LSBFIRST:
 		case BCM283X_SPI_BIT_ORDER_MSBFIRST:
 			printk(KERN_DEBUG "%s: Changing bit order to %d.\r\n", __FUNCTION__, value);
@@ -213,7 +213,6 @@ static int bcm283x_spi_change_bit_order(spi_bcm283x_context_t *context, const in
 
 	printk(KERN_ERR "%s: Unexpected value!\r\n", __FUNCTION__);
 	return -EINVAL;
-
 }
 
 /**
@@ -222,9 +221,10 @@ static int bcm283x_spi_change_bit_order(spi_bcm283x_context_t *context, const in
  * @param value An integer representing a data mode.
  * @return 0 on success, -EINVAL if the specified value is invalid.
  */
-static int bcm283x_spi_change_data_mode(spi_bcm283x_context_t *context, const int value) {
-
-	switch (value) {
+static int bcm283x_spi_change_data_mode(spi_bcm283x_context_t *context, const int value)
+{
+	switch (value)
+	{
 		case BCM283X_SPI_DATA_MODE_0:
 		case BCM283X_SPI_DATA_MODE_1:
 		case BCM283X_SPI_DATA_MODE_2:
@@ -236,7 +236,6 @@ static int bcm283x_spi_change_data_mode(spi_bcm283x_context_t *context, const in
 
 	printk(KERN_ERR "%s: Unexpected value!\r\n", __FUNCTION__);
 	return -EINVAL;
-
 }
 
 /**
@@ -245,32 +244,30 @@ static int bcm283x_spi_change_data_mode(spi_bcm283x_context_t *context, const in
  * @param value An integer representing a clock divider preference.
  * @return 0 on success, -EINVAL if the specified value is invalid.
  */
-static int bcm283x_spi_change_clock_divider(spi_bcm283x_context_t *context, const int value) {
+static int bcm283x_spi_change_clock_divider(spi_bcm283x_context_t *context, const int value)
+{
+    /*
+     * Note: use bcm283x_spi_speed_to_clock_divider(...) to obtain a valid
+     *       clock divider.
+     */
 
-	switch (value) {
-		case BCM283X_SPI_SPEED_4kHz:
-		case BCM283X_SPI_SPEED_7kHz:
-		case BCM283X_SPI_SPEED_15kHz:
-		case BCM283X_SPI_SPEED_30kHz:
-		case BCM283X_SPI_SPEED_61kHz:
-		case BCM283X_SPI_SPEED_122kHz:
-		case BCM283X_SPI_SPEED_244kHz:
-		case BCM283X_SPI_SPEED_488kHz:
-		case BCM283X_SPI_SPEED_976kHz:
-		case BCM283X_SPI_SPEED_2MHz:
-		case BCM283X_SPI_SPEED_4MHz:
-		case BCM283X_SPI_SPEED_8MHz:
-		case BCM283X_SPI_SPEED_15MHz:
-		case BCM283X_SPI_SPEED_31MHz:
-		case BCM283X_SPI_SPEED_62MHz:
-		case BCM283X_SPI_SPEED_125MHz:
-			printk(KERN_DEBUG "%s: Changing clock divider to %d.\r\n", __FUNCTION__, value);
-			context->config.clock_divider = value;
-			return 0;
-	}
+    unsigned int v = (unsigned int) value;
+    int freq;
 
-	printk(KERN_ERR "%s: Unexpected value!\r\n", __FUNCTION__);
-	return -EINVAL;
+    if ( v > 65535 )
+    {
+        printk(KERN_ERR "%s: Unexpected value %d! Clock divider must fall between [0,65535].\r\n", __FUNCTION__, value);
+        return -EINVAL;
+    }
+    if ( v == 1 )
+        v = 0;
+
+    freq = (125000000 / (v == 0 ? 32768 : (v / 2)));
+
+    printk(KERN_DEBUG "%s: Changing clock divider to %d.\r\n", __FUNCTION__, v);
+    printk(KERN_DEBUG "%s: This corresponds to an SPI frequency of %d.\r\n", __FUNCTION__, freq);
+    context->config.clock_divider = (uint16_t) v;
+    return 0;
 }
 
 /**
@@ -279,9 +276,10 @@ static int bcm283x_spi_change_clock_divider(spi_bcm283x_context_t *context, cons
  * @param value An integer representing a polarity preference.
  * @return 0 on success, -EINVAL if the specified value is invalid.
  */
-static int bcm283x_spi_change_cs_polarity(spi_bcm283x_context_t *context, const int value) {
-
-	switch (value) {
+static int bcm283x_spi_change_cs_polarity(spi_bcm283x_context_t *context, const int value)
+{
+	switch (value)
+	{
 		case BCM283X_SPI_CS_POL_LOW:
 		case BCM283X_SPI_CS_POL_HIGH:
 			printk(KERN_DEBUG "%s: Changing chip select polarity to %d.\r\n", __FUNCTION__, value);
@@ -291,7 +289,6 @@ static int bcm283x_spi_change_cs_polarity(spi_bcm283x_context_t *context, const 
 
 	printk(KERN_ERR "%s: Unexpected value!\r\n", __FUNCTION__);
 	return -EINVAL;
-
 }
 
 /**
@@ -301,8 +298,8 @@ static int bcm283x_spi_change_cs_polarity(spi_bcm283x_context_t *context, const 
  * @param[in,out] arg Request argument as passed by the user.
  * @return A positive value or 0 on success. On failure return either -ENOSYS, to request that the function be called again from the opposite realtime/non-realtime context, or another negative error code.
  */
-static int bcm283x_spi_rtdm_ioctl_rt(struct rtdm_fd *fd, unsigned int request, void __user *arg) {
-
+static int bcm283x_spi_rtdm_ioctl_rt(struct rtdm_fd *fd, unsigned int request, void __user *arg)
+{
 	spi_bcm283x_context_t *context;
 	int value;
 	int res;
@@ -320,8 +317,8 @@ static int bcm283x_spi_rtdm_ioctl_rt(struct rtdm_fd *fd, unsigned int request, v
 
 
 	/* Analyze request */
-	switch (request) {
-
+	switch (request)
+	{
 		case BCM283X_SPI_SET_BIT_ORDER: /* Change the bit order */
 			res = rtdm_safe_copy_from_user(fd, &value, arg, sizeof(int));
 			if (res) {
@@ -357,9 +354,7 @@ static int bcm283x_spi_rtdm_ioctl_rt(struct rtdm_fd *fd, unsigned int request, v
 		default: /* Unexpected case */
 			printk(KERN_ERR "%s: Unexpected request : %d!\r\n", __FUNCTION__, request);
 			return -EINVAL;
-
 	}
-
 }
 
 /**
@@ -383,8 +378,8 @@ static struct rtdm_driver spi_bcm283x_driver = {
  * This function is called when the module is loaded. It initializes the
  * spi device using the bcm2835 libary, and registers the RTDM device.
  */
-static int __init bcm283x_spi_rtdm_init(void) {
-
+static int __init bcm283x_spi_rtdm_init(void)
+{
 	int res;
 	int device_id;
 
@@ -392,14 +387,16 @@ static int __init bcm283x_spi_rtdm_init(void) {
 	printk(KERN_INFO "%s: Starting driver ...", __FUNCTION__);
 
 	/* Ensure cobalt is enabled */
-	if (!realtime_core_enabled()) {
+	if (!realtime_core_enabled())
+    {
 		printk(KERN_ERR "%s: Exiting as cobalt is not enabled!\r\n", __FUNCTION__);
 		return -1;
 	}
 
 	/* Initialize the bcm2835 library */
 	res = bcm2835_init();
-	if (res != 1) {
+	if (res != 1)
+    {
 		printk(KERN_ERR "%s: Error in bcm2835_init (%d).\r\n", __FUNCTION__, res);
 		return -1;
 	}
@@ -412,8 +409,8 @@ static int __init bcm283x_spi_rtdm_init(void) {
 	bcm2835_spi_chipSelect(BCM2835_SPI_CS_NONE);
 
 	/* Prepare to register the two devices */
-	for(device_id = 0; device_id < 2; device_id++){
-
+	for(device_id = 0; device_id < 2; device_id++)
+	{
 		/* Set device parameters */
 		spi_bcm283x_devices[device_id].driver = &spi_bcm283x_driver;
 		spi_bcm283x_devices[device_id].label = "spidev0.%d";
@@ -421,11 +418,13 @@ static int __init bcm283x_spi_rtdm_init(void) {
 
 		/* Try to register the device */
 		res = rtdm_dev_register(&spi_bcm283x_devices[device_id]);
-		if (res == 0) {
+		if (res == 0)
 			printk(KERN_INFO "%s: Device spidev0.%d registered without errors.\r\n", __FUNCTION__, device_id);
-		} else {
+		else
+        {
 			printk(KERN_ERR "%s: Device spidev0.%d registration failed : ", __FUNCTION__, device_id);
-			switch (res) {
+			switch (res)
+			{
 				case -EINVAL:
 					printk(KERN_ERR "The descriptor contains invalid entries.\r\n");
 					break;
@@ -447,27 +446,28 @@ static int __init bcm283x_spi_rtdm_init(void) {
 	}
 
 	return 0;
-
 }
 
 /**
  * This function is called when the module is unloaded. It unregisters the RTDM device.
  */
-static void __exit bcm283x_spi_rtdm_exit(void) {
-
+static void __exit bcm283x_spi_rtdm_exit(void)
+{
 	int device_id;
 
 	/* Log */
 	printk(KERN_INFO "%s: Stopping driver ...\r\n", __FUNCTION__);
 
 	/* Ensure cobalt is enabled */
-	if (!realtime_core_enabled()) {
+	if (!realtime_core_enabled())
+    {
 		printk(KERN_ERR "%s: Exiting as cobalt is not enabled!\r\n", __FUNCTION__);
 		return;
 	}
 
 	/* Unregister the two devices */
-	for (device_id = 0; device_id < 2; device_id++) {
+	for (device_id = 0; device_id < 2; device_id++)
+    {
 		printk(KERN_INFO "%s: Unregistering device %d ...\r\n", __FUNCTION__, device_id);
 		rtdm_dev_unregister(&spi_bcm283x_devices[device_id]);
 	}
@@ -480,7 +480,6 @@ static void __exit bcm283x_spi_rtdm_exit(void) {
 
 	/* Log */
 	printk(KERN_INFO "%s: All done!\r\n", __FUNCTION__);
-
 }
 
 /*

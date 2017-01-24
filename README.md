@@ -82,6 +82,7 @@ int open_device() {
 
 	int res;
 	int value;
+	double spi_speed;
 
 	/* Open device */
 	res = open("/dev/rtdm/spidev0.0", O_RDWR);
@@ -108,7 +109,9 @@ int open_device() {
 		device_handle = NULL;
 		return -1;
 	}
-	value = BCM283X_SPI_SPEED_8MHz;
+
+	spi_speed = BCM283X_SPI_SPEED_MHZ(8); /* 8 MHz. */
+	value = bcm283x_spi_speed_to_clock_divider(spi_speed);
 	res = ioctl(device_handle, BCM283X_SPI_SET_SPEED, &value);
 	if (res < 0) {
 		printf("%s: Could not configure bus speed, ioctl has failed with %d (%s).", __FUNCTION__, errno, strerror(errno));
